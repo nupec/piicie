@@ -1,0 +1,171 @@
+---
+title: "Monitorização dos PIICIE: uma proposta de avaliação para além da parametrização do sucesso"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, echo=FALSE, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 8, fig.height = 5)
+
+
+library(highcharter)
+library(devtools)
+library(fdth)
+library(gtsummary)
+library(patchwork)
+library(graphics)
+library(ggplot2)
+library(skimr)
+library(tidymodels)
+library(knitr)
+
+
+baseNN <- readr::read_rds("../data/rds/baseNN.rds")  |>
+  dplyr::mutate(rnn = round(nn/matricula, 4)) |>
+  tidyr::drop_na(ciclo)
+
+baseRet <- readr::read_rds("../data/rds/baseRETGera.rds")  |>
+  dplyr::mutate(rret = round(RETENCAO/ALUNOS, 4))
+
+tabelaCidadesNN <- baseNN |>
+  dplyr::group_by(ANOESCOLAR, Município) |>
+  dplyr::summarise(media_rnn = mean(rnn, na.rm = TRUE),
+                   tt_aluno_nn= sum(matricula),
+                   tt_nn     = sum(nn) )
+
+tabelaCidadesREt <- dplyr::filter(baseRet, 
+                                  AREA_METROPOLITANA == "Área Metropolitana do Porto") |>
+  dplyr::group_by(ANO, NOME_MUNICIPIO) |>
+  dplyr::summarise(media_rret = mean(rret, na.rm = TRUE),
+                   tt_aluno_ret = sum(ALUNOS),
+                   tt_ret = sum(RETENCAO) )
+
+tabelaNN_RET <- dplyr::bind_cols(tabelaCidadesNN, tabelaCidadesREt) |> 
+  dplyr::select(ANO, ANOESCOLAR, Município, tt_aluno_nn, tt_aluno_ret, 
+                tt_nn, tt_ret, media_rnn, media_rret)
+
+## Níveis Negativos
+
+# Calculando os níveis negativos médios por cidade
+
+tabelaCidadesNN <- baseNN |>
+  dplyr::group_by(ANOESCOLAR, Município) |>
+  dplyr::summarise(media_rnn = round(mean(rnn, na.rm = TRUE),4)
+                   )
+
+# Calculando os níveis negativos médios por cidade e ciclo escolar
+
+tabelaCidCicloNN <- baseNN |>
+  dplyr::group_by(ANOESCOLAR, Município, ciclo) |>
+  dplyr::summarise(media_rnn = round(mean(rnn, na.rm = TRUE),4))
+
+```
+### Análise preliminar dos indicadores de insucesso escolar da Área Metropolitana do Porto (AMP) e de Santa Maria da Feira (SMF)
+
+#### Considerações iniciais
+
+A análise concentou-se, principalmente, em dois indicadores: Níveis Negativos (NN) e Retenção e Desistência (RD). Foram utilizadas bases do governo central de Portugal, disponíveis em diferentes sítios oficiais. As estatísticas disponíveis cobrem períodos distintos e possuem diferentes de nívies de desagregação. Portanto, todas as vezes que foram necessárias a agregagação dos dados para efeito de modelagem, este ficaram restritos às unidades espaço-temporais que contemplavam estes dois indicadores.
+
+Em termpos espaciais, foram analisados dados educacionais dos 17 municípios da Área Metropolitana do Porto (AMP). Quanto ao período considerado, os dados dos Níveis Negativos, cobrem os anos escolares entre 2014/2015 a 2019/2020 e estão desagregados por escola e segundo e terceiro anos do Ciclo Básico. Os dados de Retenção e Desistência cobrem um período escolar menor, entre 2014/2015 a 2018/2019, mas possuem nível de desagregação dos dados para todos os anos escolares do Ciclo Básico e Sencundário. Além dos dados da AMP, foram analisados os dados de Níveis Negativos e Retenção e Desistência do município de Santa Maria da Feira.
+
+
+```{r echo=FALSE, warning=FALSE}
+
+tabela1 <- baseNN |> 
+  dplyr::group_by(Município) |> 
+  dplyr:::summarise(
+    RacioMedio_NN = round(mean(rnn, na.rm = T, Inf),4)
+  )
+
+NovabaseRet <- dplyr::filter(baseRet, 
+                        AREA_METROPOLITANA == "Área Metropolitana do Porto") |> 
+  dplyr::mutate(
+    rret = round((RETENCAO/ALUNOS), 4)
+  )
+
+
+tabela2 <- NovabaseRet |> 
+  dplyr::group_by(NOME_MUNICIPIO) |> 
+  dplyr:::summarise(
+    RacioMedio_RET = round(mean(rret, na.rm = T, Inf),4)
+  )
+
+tabela3 <- dplyr::bind_cols(tabela1, tabela2[2])
+
+```
+
+### Níveis Negativos
+
+```{r warning=FALSE, echo=FALSE}
+
+(tabela_wilder <- tabelaCidadesNN |> 
+  tidyr::pivot_wider(
+    names_from = ANOESCOLAR, 
+    values_from = media_rnn
+  ) |> knitr::kable())
+
+```
+
+#### Série Temporal a Média dos Níveis Negativos, AMP, 2014/2015 a 2018/2019
+
+```{r echo=FALSE, fig.cap="Níveis Negativos, Muncípios da AMP, 2014/2015-2019/2020", cache=TRUE, message=FALSE}
+(serieNN <- hchart(tabelaCidadesNN, 
+                   "line", 
+                   hcaes(x = ANOESCOLAR, y = media_rnn, group = Município)))
+```
+
+
+#### Sumário estatístico
+
+Considerando as 17 cidades que formam a Área Metropolitana do Porto (AMP), e os anos escolares de 2014/15 a 2018/19, o racio médio dos Níveis Negativos é 0,4654, sendo o menor valor observado no município de São João da Madeira e, o maior, em na cidade do Porto, com 0,6230.
+
+```{r, echo=FALSE}
+summary(tabela1$RacioMedio_NN) 
+```
+
+#### Histograma
+
+```{r ,fig.align='center', echo=FALSE}
+# summary(tabela1) |> knitr::kable()0.8
+
+taxaNN <- tabela1$RacioMedio_NN
+
+hchart(taxaNN, type = "area", color = "#159957", name = "TNN", braaks = 12) |> 
+    hc_title(text = "Distribuição do Racio dos Níveis Negativos para os 17 Municípios da AMP, para todos os Ciclos Escolares, 2014-2018.") |> 
+  hc_yAxis(title = list(text = "Frequência")) |> 
+  hc_xAxis(title = list(text = "Racio dos Níveis Negativos")) |> 
+  hc_add_theme(hc_theme_economist())
+  
+  
+# hist(tabela1$Taxa_NN, 
+#      main = "Distribuição da Taxa de Níveis Negativos para os 17 Municípios da AMP, de todos os Ciclos Escolares, 2014-2018", 
+#      xlab = "Taxa de Níveis Negativos",
+#      ylab = "Frequência",
+#      probability = F)
+
+# lines(density(tabela1$Taxa_NN))
+
+# boxplot(tabela1$Taxa_NN, horizontal = T )
+
+# Gráfico em colunas
+
+```
+#### Boxplot
+
+É oportundo destacar que o resultado obtido por São João da Madeira, apesar de positivo, pode ser classificado como "outlier", pois destoa dos demais resultados> O intervalo interquartil compreendem municípios com rsultados entre 0,4234 e 0,4891, ou seja, este intervalo contém 50% dois municípios considerados na análise.  
+
+```{r , fig.align = 'center', echo=FALSE}
+# summary(tabela1) |> knitr::kable()0.8
+
+
+bp1 <- data_to_boxplot(tabela1, RacioMedio_NN)
+
+highchart() |> 
+  hc_title(text = "Boxplot do Racio dos Níveis Negativos para os 17 Municípios da AMP, de todos os Ciclos Escolares, 2014-2018.") |> 
+  hc_xAxis(type = "Racio dos Níveis Negativos") |> 
+  hc_add_series_list(bp1) |> 
+  hc_add_theme(hc_theme_economist()) |> 
+  hc_colors(color = "#159957") 
+
+```
+

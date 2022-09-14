@@ -1,0 +1,151 @@
+---
+title: "Diagnóstico do (in)sucesso escolar"
+runningheader: "Tendências e padrões no sucesso" # only for pdf output
+subtitle: "An implementation in R Markdown" # only for html output
+author: "Departamento de Ciências Sociais, Política e do Território"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+bibliography: skeleton.bib
+link-citations: yes
+---
+
+```{r setup, include=FALSE, echo=FALSE, warning=FALSE, message = FALSE}
+library(tufte)
+library(ggplot2)
+library(skimr)
+library(tidymodels)
+
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+
+baseNN <- readxl::read_xlsx("../data/xlsx/baseNN.xlsx") |> 
+  filter(!matricula == 0) |> 
+  dplyr::mutate(
+    tnn = round(nn/matricula, Inf)
+  ) |> 
+  janitor::clean_names()
+  
+baseRet <- readxl::read_xlsx("../data/xlsx/baseRETGeral.xlsx")
+
+```
+
+# Preâmbulo 
+
+A análise concentou-se, principalmente, em dois indicadores: Níveis Negativos (NN) e Retenção e Desistência (RD). Foram utilizadas bases do governo central de Portugal, disponíveis em diferentes sítios oficiais. As estatísticas disponíveis cobrem períodos distintos e possuem diferentes de nívies de desagregação. Portanto, todas as vezes que foram necessárias a agregagação dos dados para efeito de modelagem, este ficaram restritos às unidades espaço-temporais que contemplavam estes dois indicadores.
+
+Em termpos espaciais, foram analisados dados educacionais dos 17 municípios da Área Metropolitana do Porto (AMP). Quanto ao período considerado, os dados dos Níveis Negativos, cobrem os anos escolares entre 2014/2015 a 2019/2020 e estão desagregados por escola e segundo e terceiro anos do Ciclo Básico. Os dados de Retenção e Desistência cobrem um período escolar menor, entre 2014/2015 a 2018/2019, mas possuem nível de desagregação dos dados para todos os anos escolares do Ciclo Básico e Sencundário. Além dos dados da AMP, foram analisados os dados de Níveis Negativos e Retenção e Desistência do município de Santa Maria da Feira
+
+
+# Níveis Negativos
+
+```{r echo=FALSE, warning=FALSE, message = FALSE}
+
+# baseNN <- baseNN
+# 
+
+baseNN |> 
+  dplyr::select(matricula, ciclo, nn, tnn) |> 
+  skim()
+
+base <- dplyr::select(baseNN, ciclo, matricula, nn, tnn)
+
+GGally::ggpairs(base |> sample_n(1000))
+
+
+```
+
+
+
+
+
+Ano Curricular X TNN
+
+```{r echo=FALSE, warning=FALSE, message = FALSE, cache=TRUE}
+library(patchwork)
+library(dplyr)
+library(glue)
+
+matriz_de_decisao1 <- baseNN |> 
+  group_by(anocurricular, municipio, ciclo) |> 
+  summarise(
+    tt_alunos = sum(matricula),
+    soma_nn = sum(nn), 
+    tnn_medio = round(mean(tnn),3)) |> 
+  na.omit()
+
+matriz_de_decisao_grafico1 <- matriz_de_decisao1 |> 
+ # mutate(rotulo = glue("{round(tnn_medio, 2)} ({tt_alunos}")) |> 
+  ggplot(aes(x = anocurricular , y = municipio )) +
+  geom_tile(aes(fill = tnn_medio)) + 
+  geom_text(aes(label = tnn_medio), colour = "white", fontface = "bold") +
+  scale_fill_gradient2(low = "midnightblue", mid = "#ddddaa", high = "darkred", midpoint = 0.4)
+
+matriz_de_decisao2 <- baseNN |> 
+  group_by(anoescolar, municipio) |> 
+  summarise(
+    tt_alunos = sum(matricula),
+    soma_nn = sum(nn), 
+    tnn_medio = round(mean(tnn),3)) |> 
+  na.omit()
+
+matriz_de_decisao_grafico2 <- matriz_de_decisao2 |> 
+ # mutate(rotulo = glue("{round(tnn_medio, 2)} ({tt_alunos}")) |> 
+  ggplot(aes(x = anoescolar , y = municipio )) +
+  geom_tile(aes(fill = tnn_medio)) + 
+  geom_text(aes(label = tnn_medio), colour = "white", fontface = "bold") +
+  scale_fill_gradient2(low = "midnightblue", mid = "#ddddaa", high = "darkred", midpoint = 0.4)
+
+
+matriz_de_decisao_grafico1 
+matriz_de_decisao_grafico2 
+
+```
+
+# Boxplot
+
+```{r echo=FALSE}
+p2 <- ggplot(matriz_de_decisao2) + 
+  geom_boxplot(aes(tnn_medio, group = municipio)) + 
+  ggtitle('Plot 2')
+
+p2
+```
+
+
+```{r , warning=FALSE, echo=FALSE, message = FALSE}
+  mod1 <- lm(tnn ~ anocurricular, data = baseNN)
+  summary(mod1) 
+  
+  mod2 <- lm(tnn ~ anoescolar, data = baseNN)
+  summary(mod2)
+  
+  mod3 <- lm(tnn ~ anoescolar + anocurricular + anoescolar * anocurricular, data = baseNN)
+  summary(mod3)
+  
+  mod4 <- lm(tnn ~ ciclo, data = baseNN)
+  summary(mod4)
+  
+  mod5 <- lm(tnn ~ municipio + anoescolar, data = baseNN)
+  summary(mod5)
+
+
+
+
+```
+```{r echo=FALSE, message = FALSE}
+baseNN |> 
+  group_by( anocurricular) |> 
+  summarise(
+    tnn_medio = round(mean(tnn),3)) |> 
+  na.omit()
+```
+
+

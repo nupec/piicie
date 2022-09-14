@@ -1,0 +1,26 @@
+---
+title: "Notas Metodógicas"
+author: "Hidelbrando F. Rodrigues"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preâmbulo {-}
+
+A análise concentrou-se, principalmente, em dois indicadores: Níveis Negativos (NN) e Retenção e Desistência (RD). Foram utilizadas bases do governo central de Portugal, disponíveis em diferentes sítios oficiais. As estatísticas disponíveis cobrem períodos distintos e possuem diferentes de nívies de desagregação. Portanto, todas as vezes que foram necessárias a agregação dos dados para efeito de modelagem, estes ficaram restritos às unidades espaço-temporais que contemplavam estes dois indicadores.
+
+Em termos espaciais, foram analisados dados educacionais dos 17 municípios da Área Metropolitana do Porto (AMP). Quanto ao período considerado, os dados dos Níveis Negativos, cobrem os anos escolares entre 2014/2015 a 2019/2020 e estão desagregados por escola e segundo e terceiro anos do Ciclo Básico. Os dados de Retenção e Desistência cobrem um período escolar menor, entre 2014/2015 a 2018/2019, mas possuem nível de desagregação dos dados para todos os anos escolares do Ciclo Básico e Secundário. Além dos dados da AMP, foram analisados os dados de Níveis Negativos e Retenção e Desistência do município de Santa Maria da Feira
+
+
+# Níveis Negativos (NN)
+
+### Análise de agrupamentos (clusterização) {-}
+
+Em uma etapa posterior, foram consolidados dados de todo o país da população estudantil, taxa de retenção e desistência e equidade, com o objetivo de identificar padrões entre as diversas regiões do país, ao considerar essas três variáveis. Estes dados estão desagregados por nível de ensino, ciclo de estudos, ano de escolaridade, NUTS II, NUTS III de 2013 e município.
+
+Análise de agrupamento pode ser entendida como um processo que permite descobrir relações existentes entre os exemplares de um conjunto de dados descritos por uma série de características (atributos descritivos). Em geral, as análises realizadas pelos algoritmos que implementam estratégias para agrupamento buscam por similaridades ou diferenças entre exemplares, qualificadas por meio de medidas de distância (quanto menor for a distância entre dois exemplares, maior será a similaridade), tal que exemplares similares sejam associados a um mesmo grupo, e exemplares dissimilares, a grupos diferentes. Ao final da execução de um algoritmo de agrupamento, uma estrutura de grupo é formada de maneira que a similaridade intragrupos tenham sido maximizadas, e a similaridade intergrupos tenham sido maximizada. Este estudo utiliza o **k-means**, que agrupa os dados tentando separar as amostras em grupos de variância igaul com relação aos pontos médios, chamados *centroides*. (Silva, Peres e Boscarioli, 2021 & Sampaio, 2018). Nesta primeira fase, serão consideradas os 17 municípios da Área Metropolitana do Porto e as variáveis: Total de Alunos, Níveis Negativos, Retenção e Equidade, sendo maximizada. Este estudo utiliza o **k-means**, que agrupa os dados tentando separar as amostras em grupos de variância igual com relação aos pontos médios, chamados *centroides*. (Silva, Peres e Boscarioli, 2021 & Sampaio, 2018). Nesta primeira fase, serão consideradas os 17 municípios da Área Metropolitana do Porto e as variáveis: Total de Alunos, Níveis Negativos, Retenção e Equidade.
+
